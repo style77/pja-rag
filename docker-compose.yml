@@ -1,0 +1,25 @@
+version: "3.3"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./data:/data
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - qdrant
+    env_file:
+      - .env
+    volumes:
+      - ./app:/code/app
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
