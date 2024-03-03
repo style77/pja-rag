@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     DATA_DIRECTORY: str = "data/"
 
+    ALLOWED_HOSTS: list[str] = ["*"]
+
     @property
     def is_local(self):
         return self.ENVIRONMENT == Environment.LOCAL.value
