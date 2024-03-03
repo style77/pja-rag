@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+.chat-input::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chat-input::-webkit-scrollbar-thumb {
+  background-color: rgb(56, 56, 56);
+}
+
+.messageDisplay {
+    white-space: pre-wrap;
+}

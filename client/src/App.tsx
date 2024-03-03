@@ -1,10 +1,10 @@
 import React from "react";
-import Counter from "./features/counter/Counter";
+import ChatContainer from "./components/ChatContainer";
 
 function App(): JSX.Element {
   return (
     <div className="App">
-      <Counter />
+      <ChatContainer />
     </div>
   );
 }
