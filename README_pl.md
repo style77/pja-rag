@@ -159,3 +159,46 @@ def search(query: str) -> str:
         raise RetrievalNoDocumentsFoundException  # Własny wyjątek, który obsługuje brak dokumentów
     return "\n".join(result.document for result in search_result)
 ```
+
+Następnie należy zaimplementować logikę wysyłania finalnego promptu do Ollamy, w moim przypadku dodałem zwracanie tekstu jako Stream, można to też zrobić statycznie.
+
+```py
+class CompletionService:
+    @classmethod
+    async def with_stream(cls, input_message: Message):
+        async def stream_response():
+            async with httpx.AsyncClient(timeout=300) as client:
+                latest_message = input_message.messages.pop()
+                # Tutaj jest generowany finalny prompt
+                enhanced_query = process_retrieval(latest_message.content)
+
+                # Formatowanie wcześniejszych wiadomości 
+                messages = [
+                    {"role": message.role.value, "content": message.content}
+                    for message in input_message.messages
+                ]
+
+                messages.append(
+                    {"role": latest_message.role.value, "content": enhanced_query}
+                )
+
+                # Wysłanie prompta do Ollamy
+                async with client.stream(
+                    "POST",
+                    f"{settings.OLLAMA_HOST}/api/chat",
+                    json={"model": ModelEnum.MIXTRAL.value, "messages": messages},
+                ) as response:
+                    async for chunk in response.aiter_bytes():
+                        yield chunk
+
+        return stream_response
+```
+
+Serwis odpowiadający za stworzenie StreamingResponse, oczywiście musi zostać gdzieś użyty. Tworzymy Endpoint, który będzie obsługiwał zapytania, a następnie zwracał StreamingResponse.
+
+```py
+@router.post("/v1/completion")
+async def completion_create(input_message: Message) -> StreamingResponse:
+    stream_response = await CompletionService.with_stream(input_message)
+    return StreamingResponse(stream_response())
+```
