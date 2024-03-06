@@ -1,8 +1,9 @@
 import React, { ChangeEvent, useState } from 'react';
-import { addMessage, fetchCompletion } from '../features/chat/chatSlice';
+import { addMessage, updateLatestAssistantMessage } from '../features/chat/chatSlice';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { RootState } from '../app/store';
 import { Send } from 'lucide-react'
+import { sendMessage } from '../features/chat/chatAPI';
 
 const SendMessageForm = () => {
   const [message, setMessage] = useState('');
@@ -10,6 +11,14 @@ const SendMessageForm = () => {
   const { messages } = useAppSelector((state: RootState) => state.chat);
 
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  const formRef = React.useRef<HTMLFormElement>(null);
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'smooth',
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,9 +27,40 @@ const SendMessageForm = () => {
     const messagesCopy = [...messages];
     messagesCopy.push({ content: message, role: 'user' });
 
-    dispatch(addMessage({ content: message, role: 'user' }));
-    await dispatch(fetchCompletion(messagesCopy));
     setMessage('');
+
+    dispatch(addMessage({ content: message, role: 'user' }));
+
+    const response = await sendMessage(messagesCopy)
+
+    if (!response.body) {
+      throw new Error("Stream not present")
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    dispatch(addMessage({ content: "", role: 'assistant' }));
+
+    reader.read().then(function processText({ done, value }) {
+      if (done) {
+        return;
+      }
+
+      const chunk = decoder.decode(value, { stream: true })
+      try {
+        const jsonChunk = JSON.parse(chunk);
+        const content = jsonChunk.message.content;
+
+        dispatch(updateLatestAssistantMessage(content));
+        scrollToBottom();
+      } catch (error) {
+        console.error("Error parsing JSON from chunk:", error);
+      }
+
+      reader.read().then(processText)
+    })
+
     inputRef.current?.focus();
     inputRef.current?.style.setProperty('height', '45px');
   };
@@ -31,7 +71,7 @@ const SendMessageForm = () => {
   };
 
   return (
-    <form className="mt-auto p-4 items-center justify-center flex" onSubmit={handleSubmit}>
+    <form className="mt-auto p-4 items-center justify-center flex" onSubmit={handleSubmit} ref={formRef}>
       <div className="relative flex items-center w-full lg:w-1/2">
         <textarea
           ref={inputRef}
@@ -41,6 +81,12 @@ const SendMessageForm = () => {
           onChange={(e) => setMessage(e.target.value)}
           style={{ maxHeight: '80vh', height: '45px' }}
           onInput={handleInput}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              formRef.current && formRef.current.requestSubmit()
+            }
+          }}
         />
         <button className="absolute right-3 bottom-3 text-neutral-200 disabled:text-neutral-600 transition duration-75" disabled={message.length < 1}>
           <Send size={20} />

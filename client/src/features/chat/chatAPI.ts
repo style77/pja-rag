@@ -1,11 +1,6 @@
 import { Message } from "./chatSlice";
 
-export async function sendMessage(messages: Message[]): Promise<{
-    data: {
-        created_at: string;
-        response: string;
-    };
-}> {
+export async function sendMessage(messages: Message[]): Promise<Response> {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/v1/completion`, {
         method: 'POST',
         headers: {
@@ -18,6 +13,5 @@ export async function sendMessage(messages: Message[]): Promise<{
         throw new Error('Network response was not ok');
     }
 
-    const data: { created_at: string; response: string } = await response.json();
-    return { data };
+    return response
 }
