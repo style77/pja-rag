@@ -1,9 +1,9 @@
 import os
-import random
 from typing import List
 import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct
+from qdrant_client.models import VectorParams, Distance
 
 from scraper.parsers import FileParser
 
@@ -24,31 +24,60 @@ def convert_to_vector(text: str) -> List[float]:
     return vectors
 
 
+def chunk_text(text: str, max_words: int = 400) -> List[str]:
+    words = text.split()
+    chunks = [' '.join(words[i:i + max_words]) for i in range(0, len(words), max_words)]
+    return chunks
+
+
+def process_file(root, file):
+    filepath = os.path.join(root, file)
+    try:
+        parser = FileParser(filepath)
+        data = parser.parse()
+    except Exception as e:
+        print(f"Failed to parse file: {file}, error: {e}")
+        return
+
+    chunks = chunk_text(data.content)
+    for chunk in chunks:
+        id_ = uuid.uuid4().hex
+
+        yield {
+            "id": id_,
+            "content": chunk,
+            "metadata": {
+                "filename": data.filename,
+                "path": data.path,
+                "metadata": data.metadata,
+            },
+        }
+
+
 def process_files(qdrant_client: QdrantClient):
     directory = os.walk(config.DATA_DIRECTORY)
     points = []
 
     for root, _, files in directory:
         for file in files:
-            filepath = os.path.join(root, file)
-            try:
-                parser = FileParser(filepath)
-                content = parser.parse()
-            except Exception as e:
-                print(f"Failed to parse file: {file}, error: {e}")
-                continue
+            payload = process_file(root, file)
+            for payload in payload:
+                points.append(payload)
 
-            id_ = uuid.uuid4().hex
-            vector = convert_to_vector(content)
-            vector_payload = {"fast-bge-small-en": vector.tolist()}
-            payload = PointStruct(id=id_, vector=vector_payload, payload={"text": content})
-            points.append(payload)
-
-    qdrant_client.upsert(collection_name=config.QDRANT_COLLECTION_NAME, points=points, wait=True)
+    qdrant_client.add(
+        collection_name=config.QDRANT_COLLECTION_NAME,
+        ids=[point["id"] for point in points],
+        documents=[point["content"] for point in points],
+        metadata=[point["metadata"] for point in points],
+    )
 
 
 if __name__ == "__main__":
-    client = QdrantClient(url=config.QDRANT_HOST, api_key=config.QDRANT_API_KEY, timeout=300)
+    client = QdrantClient(
+        url=config.QDRANT_HOST, api_key=config.QDRANT_API_KEY, timeout=300
+    )
+
+    client.delete_collection(collection_name=config.QDRANT_COLLECTION_NAME)
 
     process_files(client)
     print("Data inserted successfully!")
