@@ -1,6 +1,6 @@
 from typing import List, Union
 from pydantic import BaseModel
-from app.chat.constants import ModelEnum, RoleEnum
+from app.chat.constants import RoleEnum
 
 from app.core.models import TimestampAbstractModel
 
