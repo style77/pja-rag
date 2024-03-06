@@ -1,45 +1,35 @@
 from abc import ABC, abstractmethod
 from docx import Document
-import openpyxl
 import pdfplumber
+from dataclasses import dataclass
+
+
+@dataclass
+class ParsedData:
+    content: str
+    filename: str
+    path: str
+    metadata: dict
 
 
 class BaseParser(ABC):
     @abstractmethod
-    def parse(self, filepath):
+    def parse(self, filepath: str) -> ParsedData:
         pass
-
-
-class DocxParser(BaseParser):
-    def parse(self, filepath):
-        document = Document(filepath)
-        return "\n".join([paragraph.text for paragraph in document.paragraphs])
 
 
 class PdfParser(BaseParser):
     def parse(self, filepath):
         with pdfplumber.open(filepath) as pdf:
             content = ''.join([page.extract_text() for page in pdf.pages])
-            return content
+            metadata = pdf.metadata
+        return ParsedData(content, filepath.split("/")[-1], filepath, metadata)
 
 
 class TxtParser(BaseParser):
     def parse(self, filepath):
         with open(filepath, "r") as file:
-            return file.read()
-
-
-class XlsxParser(BaseParser):
-    def parse(self, filepath):
-        workbook = openpyxl.load_workbook(filepath)
-        content = ""
-        for sheet in workbook.sheetnames:
-            worksheet = workbook[sheet]
-            for row in worksheet.iter_rows(values_only=True):
-                content += "\n" + ", ".join(
-                    [str(cell) if cell is not None else "" for cell in row]
-                )
-        return content
+            return ParsedData(file.read(), filepath.split("/")[-1], filepath, {})
 
 
 class ParserFactory:
@@ -58,21 +48,18 @@ class ParserFactory:
 
 
 ParserFactory.register_parser("pdf", PdfParser)
-# ParserFactory.register_parser("txt", TxtParser)
-# ParserFactory.register_parser("json", TxtParser)
-# ParserFactory.register_parser("docx", DocxParser)
-# ParserFactory.register_parser("xlsx", XlsxParser)
-# ParserFactory.register_parser("xls", XlsxParser)
+ParserFactory.register_parser("txt", TxtParser)
+ParserFactory.register_parser("json", TxtParser)
 
 
 class FileParser:
-    def __init__(self, filepath):
+    def __init__(self, filepath: str):
         self.filepath = filepath
         self.parser = self._get_parser()
 
-    def _get_parser(self):
+    def _get_parser(self) -> BaseParser:
         extension = self.filepath.split(".")[-1]
         return ParserFactory.get_parser(extension)
 
-    def parse(self):
+    def parse(self) -> ParsedData:
         return self.parser.parse(self.filepath)

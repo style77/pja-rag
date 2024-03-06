@@ -43,6 +43,7 @@ class Scraper:
                 if response.status == 200:
                     # Ensure the directory exists
                     os.makedirs(directory_path, exist_ok=True)
+
                     file_path = os.path.join(directory_path, file.name)
                     with open(file_path, 'wb') as f:
                         while True:
@@ -56,7 +57,6 @@ class Scraper:
 
     async def _get_all_links(self, driver, url: str):
         await driver.get(url)
-        # await driver.sleep(0.5)
 
         elements = await driver.find_elements(By.XPATH, "//a[@href]")
         hrefs = [await element.get_attribute("href") for element in elements]
@@ -78,7 +78,7 @@ class Scraper:
 
                 download_path = os.path.join(settings.DATA_DIRECTORY, directory.name)
                 ext = file_obj.name.split('.')[-1]
-                if ext in ["pdf", "docx", "pptx", "xlsx", "txt", "csv", "json"]:
+                if ext in ["pdf", "txt", "csv", "json", "md"]:
                     asyncio.create_task(self.download_file(file_obj, download_path))
 
     async def run(self):
