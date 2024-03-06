@@ -15,3 +15,4 @@ class RoleEnum(StrEnum):
 
 class ModelEnum(StrEnum):
     MISTRAL: str = "mistral"
+    MIXTRAL: str = "mixtral"
