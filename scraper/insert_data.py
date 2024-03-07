@@ -2,8 +2,6 @@ import os
 from typing import List
 import uuid
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import PointStruct
-from qdrant_client.models import VectorParams, Distance
 
 from scraper.parsers import FileParser
 
