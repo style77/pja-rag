@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List
 import uuid
 from qdrant_client import QdrantClient
@@ -9,6 +10,10 @@ from scraper import config
 
 from sentence_transformers import SentenceTransformer
 import torch
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 model = SentenceTransformer(
@@ -24,7 +29,9 @@ def convert_to_vector(text: str) -> List[float]:
 
 def chunk_text(text: str, max_words: int = 400) -> List[str]:
     words = text.split()
-    chunks = [' '.join(words[i:i + max_words]) for i in range(0, len(words), max_words)]
+    chunks = [
+        " ".join(words[i : i + max_words]) for i in range(0, len(words), max_words)
+    ]
     return chunks
 
 
@@ -58,8 +65,12 @@ def process_files(qdrant_client: QdrantClient):
 
     for root, _, files in directory:
         for file in files:
-            payload = process_file(root, file)
-            for payload in payload:
+            logger.info(f"Processing file: {file}")
+            payloads = process_file(root, file)
+            for i, payload in enumerate(payloads):
+                logger.info(
+                    f"| Processing payload: {i} for file: {file}"
+                )
                 points.append(payload)
 
     qdrant_client.add(
@@ -77,5 +88,6 @@ if __name__ == "__main__":
 
     client.delete_collection(collection_name=config.QDRANT_COLLECTION_NAME)
 
+    logger.info("Processing files")
     process_files(client)
-    print("Data inserted successfully!")
+    logger.info("Data inserted successfully!")
