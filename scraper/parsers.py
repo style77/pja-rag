@@ -1,7 +1,21 @@
 from abc import ABC, abstractmethod
-from docx import Document
+import json
 import pdfplumber
 from dataclasses import dataclass
+
+
+def find_url_hash_mapping(url_hash: str) -> str:
+    """
+    Find original url from url_hash
+    """
+    mapping_file = "url_hash_mapping.json"
+    try:
+        with open(mapping_file, "r") as f:
+            mapping = json.load(f)
+    except FileNotFoundError:
+        return None
+
+    return mapping.get(url_hash)
 
 
 @dataclass
@@ -21,15 +35,22 @@ class BaseParser(ABC):
 class PdfParser(BaseParser):
     def parse(self, filepath):
         with pdfplumber.open(filepath) as pdf:
-            content = ''.join([page.extract_text() for page in pdf.pages])
+            content = "".join([page.extract_text() for page in pdf.pages])
             metadata = pdf.metadata
-        return ParsedData(content, filepath.split("/")[-1], filepath, metadata)
+
+            file_url = find_url_hash_mapping(filepath.split("/")[-1].split("_")[-1])
+            file_name = filepath.split("/")[-1].split(".")[0:-1]
+
+            return ParsedData(content, file_name, file_url, metadata)
 
 
 class TxtParser(BaseParser):
     def parse(self, filepath):
         with open(filepath, "r") as file:
-            return ParsedData(file.read(), filepath.split("/")[-1], filepath, {})
+            file_url = find_url_hash_mapping(filepath.split("/")[-1].split("_")[-1])
+            file_name = filepath.split("/")[-1].split(".")[0:-1]
+
+            return ParsedData(file.read(), file_name, file_url, {})
 
 
 class ParserFactory:
@@ -41,6 +62,8 @@ class ParserFactory:
 
     @classmethod
     def get_parser(cls, extension):
+        extension = extension.lower()
+        extension = extension.split("_")[0]
         parser = cls._parsers.get(extension)
         if not parser:
             raise ValueError(f"No parser found for extension: {extension}")
