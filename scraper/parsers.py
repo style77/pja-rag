@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 import json
-import pdfplumber
 from dataclasses import dataclass
+
+from llama_parse import LlamaParse
+
+from scraper import config
 
 
 def find_url_hash_mapping(url_hash: str) -> str:
@@ -31,24 +34,37 @@ class BaseParser(ABC):
     def parse(self, filepath: str) -> ParsedData:
         pass
 
+    def get_file_properties(self, filepath: str):
+        url_hash = filepath.split("/")[-1].split(".")[0].split("_")[-1]
+        file_url = find_url_hash_mapping(url_hash)
+        file_ext = filepath.split("/")[-1].split(".")[-1]
+        file_name = filepath.split("/")[-1].split(".")[0].split("_")[0] + "." + file_ext
+
+        return file_url, file_name
+
 
 class PdfParser(BaseParser):
+    parser = LlamaParse(verbose=True, api_key=config.LLAMA_PARSE_API_KEY)
+
     def parse(self, filepath):
-        with pdfplumber.open(filepath) as pdf:
-            content = "".join([page.extract_text() for page in pdf.pages])
-            metadata = pdf.metadata
+        json_objs = self.parser.get_json_result(filepath)
 
-            file_url = find_url_hash_mapping(filepath.split("/")[-1].split("_")[-1])
-            file_name = filepath.split("/")[-1].split(".")[0:-1]
+        if json_objs and "pages" in json_objs[0]:
+            content = "".join([page.get("text", "") for page in json_objs[0]["pages"]])
+        else:
+            content = ""
 
-            return ParsedData(content, file_name, file_url, metadata)
+        metadata = json_objs[0].get("metadata", {})
+
+        file_url, file_name = self.get_file_properties(filepath)
+
+        return ParsedData(content, file_name, file_url, metadata)
 
 
 class TxtParser(BaseParser):
     def parse(self, filepath):
         with open(filepath, "r") as file:
-            file_url = find_url_hash_mapping(filepath.split("/")[-1].split("_")[-1])
-            file_name = filepath.split("/")[-1].split(".")[0:-1]
+            file_url, file_name = self.get_file_properties(filepath)
 
             return ParsedData(file.read(), file_name, file_url, {})
 
