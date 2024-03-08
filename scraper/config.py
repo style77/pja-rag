@@ -15,5 +15,7 @@ class ScraperSettings(BaseSettings):
 
     OLLAMA_HOST: str = "http://ollama:8000"  # Pydantic is dumb, and raises ValidationError
 
+    LLAMA_PARSE_API_KEY: str
+
     class Config:
         env_file = ".env"
