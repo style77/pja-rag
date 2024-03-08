@@ -63,7 +63,7 @@ class Scraper:
                     file_ext = file_splitted[-1]
                     file_name = file_splitted[0]
 
-                    file_name_with_hash = f"{file_name}.{file_ext}_{url_hash}"
+                    file_name_with_hash = f"{file_name}_{url_hash}.{file_ext}"
                     file_path = os.path.join(directory_path, file_name_with_hash)
                     with open(file_path, 'wb') as f:
                         while True:
