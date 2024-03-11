@@ -2,9 +2,7 @@ from abc import ABC, abstractmethod
 import json
 from dataclasses import dataclass
 
-from llama_parse import LlamaParse
-
-from scraper import config
+import pdfplumber
 
 
 def find_url_hash_mapping(url_hash: str) -> str:
@@ -44,17 +42,10 @@ class BaseParser(ABC):
 
 
 class PdfParser(BaseParser):
-    parser = LlamaParse(verbose=True, api_key=config.LLAMA_PARSE_API_KEY)
-
     def parse(self, filepath):
-        json_objs = self.parser.get_json_result(filepath)
-
-        if json_objs and "pages" in json_objs[0]:
-            content = "".join([page.get("text", "") for page in json_objs[0]["pages"]])
-        else:
-            content = ""
-
-        metadata = json_objs[0].get("metadata", {})
+        with pdfplumber.open(filepath) as pdf:
+            content = ''.join([page.extract_text() for page in pdf.pages])
+            metadata = pdf.metadata
 
         file_url, file_name = self.get_file_properties(filepath)
 
