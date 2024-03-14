@@ -32,13 +32,16 @@ class BaseParser(ABC):
     def parse(self, filepath: str) -> ParsedData:
         pass
 
-    def get_file_properties(self, filepath: str):
-        url_hash = filepath.split("/")[-1].split(".")[0].split("_")[-1]
-        file_url = find_url_hash_mapping(url_hash)
-        file_ext = filepath.split("/")[-1].split(".")[-1]
-        file_name = filepath.split("/")[-1].split(".")[0].split("_")[0] + "." + file_ext
+    def get_file_properties(filepath: str, mapping_file_path: str) -> tuple[str, str]:
+        parts = filepath.split("/")[-1].rsplit("_", 1)
+        file_name_with_underscores, hash_and_ext = parts
+        hash_part, file_ext = hash_and_ext.split(".")
 
-        return file_url, file_name
+        full_file_name = f"{file_name_with_underscores}.{file_ext}"
+
+        file_url = find_url_hash_mapping(hash_part[:10], mapping_file_path)  # Using first 10 characters of the hash
+
+        return file_url, full_file_name
 
 
 class PdfParser(BaseParser):
