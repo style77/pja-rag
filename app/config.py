@@ -1,4 +1,5 @@
 from typing import Optional
+import typing
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -15,6 +16,8 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION_NAME: str = "documents"
 
     DATA_DIRECTORY: str = "data/"
+
+    OPENAI_KEY: typing.Optional[str] = None
 
     ALLOWED_HOSTS: list[str] = ["*"]
 

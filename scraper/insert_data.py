@@ -2,6 +2,7 @@ import os
 import logging
 from typing import List, Union
 import uuid
+from openai import OpenAI
 from qdrant_client import QdrantClient
 
 from scraper.parsers import FileParser
@@ -21,18 +22,17 @@ model = SentenceTransformer(
     device="cuda" if torch.cuda.is_available() else "cpu",
 )
 
-openai_key = os.getenv("OPENAI_KEY")
 
-
-def get_embedding(
-    text: str, model: str = "text-embedding-3-small"
-):
+def get_embedding(text: str, model: str = "text-embedding-3-small"):
     text = text.replace("\n", " ")
-    return client.embeddings.create(input=[text], model=model).data[0].embedding
+    openai_client = OpenAI(
+        config.OPENAI_KEY
+    )  # todo, obj should not be created every time
+    return openai_client.embeddings.create(input=[text], model=model).data[0].embedding
 
 
 def convert_to_vector(text: str) -> List[float]:
-    if openai_key:
+    if config.OPENAI_KEY:
         vectors = get_embedding(text)
     else:
         vectors = model.encode([text])[0].tolist()

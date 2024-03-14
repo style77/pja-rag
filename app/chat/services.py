@@ -1,4 +1,3 @@
-import os
 import httpx
 from app.chat.retrieval import process_retrieval
 from app.config import settings
@@ -8,7 +7,7 @@ from app.chat.models import Message
 
 from openai import AsyncOpenAI
 
-openai_key = os.getenv("OPENAI_KEY")
+openai_key = settings.OPENAI_KEY
 if openai_key:
     client = AsyncOpenAI(api_key=openai_key)
 
