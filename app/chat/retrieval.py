@@ -24,7 +24,7 @@ def process_retrieval(query: str) -> str:
     search_contents_with_sources_str = "\n".join(search_contents_with_sources)
 
     resulting_query: str = (
-        "Answer based only on the context and your general knowledge
+        "Answer based only on the context and your general knowledge"
         f"QUERY:\n{query}\n\n"
         f"{search_contents_with_sources_str}"
     )
