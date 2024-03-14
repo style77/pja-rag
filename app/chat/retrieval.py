@@ -1,4 +1,6 @@
+from typing import List
 from qdrant_client import QdrantClient
+from qdrant_client.fastembed_common import QueryResponse
 
 from app.chat.exceptions import RetrievalNoDocumentsFoundException
 from app.config import settings
@@ -12,23 +14,21 @@ def process_retrieval(query: str) -> str:
     Create query based on the context of the message
     """
     search_result = search(query=query)
-    # resulting_query: str = (
-    #     "Please provide a response in the same language as the query. Based on the information retrieved from the document, provide a concise summary and explain the key points related to the query. Make sure to synthesize the information in a way that offers clear insights. \n"
-    #     f"QUERY:\n{query}\n"
-    #     f"CONTEXT:\n{search_result}\n"
-    #     "Please, summarize the information and explain how it relates to the query, offering any necessary context or explanation for a better understanding.\n"
-    # )
+    search_content = "\n".join(result.document for result in search_result)
+    source = ", ".join(result.metadata.get("path") for result in search_result)
+
     resulting_query: str = (
-        "Answer based only on the context, nothing else if you don't know just say \"I don't know\".\n"
+        "Answer based only on the context, nothing else if you don't know just say \"I don't know\". Add source at the end of the message\n"
         f"QUERY:\n{query}\n"
-        f"CONTEXT:\n{search_result}\n"
+        f"CONTEXT:\n{search_content}\n"
+        f"SOURCE: {source}"
         # "Please, summarize the information and explain how it relates to the query, offering any necessary context or explanation for a better understanding.\n"
     )
     logger.info(f"Resulting Query: {resulting_query}")
     return resulting_query
 
 
-def search(query: str) -> str:
+def search(query: str) -> List[QueryResponse]:
     """
     Search for the most relevant context based on the query
     """
@@ -38,4 +38,4 @@ def search(query: str) -> str:
     )
     if not search_result:
         raise RetrievalNoDocumentsFoundException
-    return "\n".join(result.document for result in search_result)
+    return search_result
