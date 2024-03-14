@@ -51,4 +51,4 @@ class CompletionService:
             async for chunk in response.aiter_bytes():
                 yield chunk
 
-        return stream_response if openai_key else stream_response_openai
+        return stream_response_openai if openai_key else stream_response
