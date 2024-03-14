@@ -47,15 +47,46 @@ const SendMessageForm = () => {
         return;
       }
 
-      const chunk = decoder.decode(value, { stream: true })
-      try {
-        const jsonChunk = JSON.parse(chunk);
-        const content = jsonChunk.message.content;
+      let chunk = decoder.decode(value, { stream: true })
 
-        dispatch(updateLatestAssistantMessage(content));
-        scrollToBottom();
-      } catch (error) {
-        console.error("Error parsing JSON from chunk:", error);
+      // check if chunk startswith 'data: ' and remove it from it
+
+      let openai = false;
+
+      if (chunk.startsWith('data: ')) {
+        chunk = chunk.slice(6);
+        openai = true;
+      }
+
+      if (openai) {
+        const jsonStrings = chunk.trim().split('\n').filter(line => line);
+
+        jsonStrings.forEach(jsonStr => {
+          try {
+            if (jsonStr.startsWith('data: ')) {
+              jsonStr = jsonStr.slice(6);
+            }
+
+            const jsonChunk = JSON.parse(jsonStr);
+            const content = jsonChunk.choices?.[0].delta.content;
+            if (content) {
+              dispatch(updateLatestAssistantMessage(content));
+              scrollToBottom();
+            }
+          } catch (error) {
+            console.error("Error parsing JSON from chunk:", error);
+          }
+        });
+      } else {
+        try {
+          const jsonChunk = JSON.parse(chunk);
+          const content = jsonChunk.message.content;
+
+          dispatch(updateLatestAssistantMessage(content));
+          scrollToBottom();
+        } catch (error) {
+          console.error("Error parsing JSON from chunk:", error);
+        }
       }
 
       reader.read().then(processText)
