@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List
+from typing import List, Union
 import uuid
 from qdrant_client import QdrantClient
 
@@ -21,9 +21,21 @@ model = SentenceTransformer(
     device="cuda" if torch.cuda.is_available() else "cpu",
 )
 
+openai_key = os.getenv("OPENAI_KEY")
+
+
+def get_embedding(
+    text: str, model: str = "text-embedding-3-small"
+):
+    text = text.replace("\n", " ")
+    return client.embeddings.create(input=[text], model=model).data[0].embedding
+
 
 def convert_to_vector(text: str) -> List[float]:
-    vectors = model.encode(text, show_progress_bar=False)
+    if openai_key:
+        vectors = get_embedding(text)
+    else:
+        vectors = model.encode([text])[0].tolist()
     return vectors
 
 
@@ -68,9 +80,7 @@ def process_files(qdrant_client: QdrantClient):
             logger.info(f"Processing file: {file}")
             payloads = process_file(root, file)
             for i, payload in enumerate(payloads):
-                logger.info(
-                    f"| Processing payload: {i} for file: {file}"
-                )
+                logger.info(f"| Processing payload: {i} for file: {file}")
                 points.append(payload)
 
     qdrant_client.add(
