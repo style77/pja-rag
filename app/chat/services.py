@@ -42,7 +42,7 @@ class CompletionService:
                         yield chunk
 
         async def stream_response_openai():
-            response = await client.completions.create(
+            response = await client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=cls.get_messages(input_message),
                 stream=True
