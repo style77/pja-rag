@@ -11,18 +11,23 @@ client = QdrantClient(url=settings.QDRANT_HOST, api_key=settings.QDRANT_API_KEY)
 
 def process_retrieval(query: str) -> str:
     """
-    Create query based on the context of the message
+    Create a query based on the context of the message, clearly linking each piece of context to its source URL or identifier.
     """
-    search_result = search(query=query)
-    search_content = "\n".join(result.document for result in search_result)
-    source = ", ".join(result.metadata.get("path") for result in search_result)
+    search_results = search(query=query)
+
+    search_contents_with_sources = []
+    for i, result in enumerate(search_results, start=1):
+        document = result.document.strip()
+        source = result.metadata.get("path", "Unknown source").strip()
+        search_contents_with_sources.append(f"CONTEXT {i}:\n{document}\nSOURCE {i}: {source}\n")
+
+    search_contents_with_sources_str = "\n".join(search_contents_with_sources)
 
     resulting_query: str = (
-        "Answer based only on the context, nothing else if you don't know just say \"I don't know\". Add source at the end of the message\n"
-        f"QUERY:\n{query}\n"
-        f"CONTEXT:\n{search_content}\n"
-        f"SOURCE: {source}"
-        # "Please, summarize the information and explain how it relates to the query, offering any necessary context or explanation for a better understanding.\n"
+        "Answer based only on the context, nothing else. If you don't know, just say \"I don't know\". "
+        "Please, include the source of the information at the end of your answer.\n"
+        f"QUERY:\n{query}\n\n"
+        f"{search_contents_with_sources_str}"
     )
     logger.info(f"Resulting Query: {resulting_query}")
     return resulting_query
