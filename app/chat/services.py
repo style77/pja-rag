@@ -5,7 +5,7 @@ from app.chat.constants import ModelEnum
 
 from app.chat.models import Message
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, AsyncStream
 
 openai_key = settings.OPENAI_KEY
 if openai_key:
@@ -42,13 +42,13 @@ class CompletionService:
                         yield chunk
 
         async def stream_response_openai():
-            response = await client.chat.completions.create(
+            response: AsyncStream = await client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=cls.get_messages(input_message),
                 stream=True
             )
 
-            async for chunk in response.aiter_bytes():
+            async for chunk in response.response.aiter_bytes():
                 yield chunk
 
         return stream_response_openai if openai_key else stream_response
