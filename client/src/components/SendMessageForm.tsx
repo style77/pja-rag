@@ -67,6 +67,11 @@ const SendMessageForm = () => {
               jsonStr = jsonStr.slice(6);
             }
 
+            console.log(jsonStr)
+            if (jsonStr === '[DONE]') {
+              return;
+            }
+
             const jsonChunk = JSON.parse(jsonStr);
             const content = jsonChunk.choices?.[0].delta.content;
             if (content) {
