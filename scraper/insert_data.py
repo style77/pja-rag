@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List, Union
+from typing import List
 import uuid
 from openai import OpenAI
 from qdrant_client import QdrantClient
@@ -11,6 +11,8 @@ from scraper import config
 
 from sentence_transformers import SentenceTransformer
 import torch
+import nltk
+nltk.download('punkt')
 
 
 logging.basicConfig(level=logging.INFO)
@@ -39,11 +41,17 @@ def convert_to_vector(text: str) -> List[float]:
     return vectors
 
 
-def chunk_text(text: str, max_words: int = 400) -> List[str]:
-    words = text.split()
-    chunks = [
-        " ".join(words[i : i + max_words]) for i in range(0, len(words), max_words)
-    ]
+def chunk_text(text: str, max_sentences: int = 2) -> List[str]:
+    sentences = nltk.sent_tokenize(text)
+    chunks = []
+    current_chunk = ''
+    for sentence in sentences:
+        if len(current_chunk.split('\n')) >= max_sentences:
+            chunks.append(current_chunk.strip())
+            current_chunk = ''
+        current_chunk += sentence + '\n'
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
     return chunks
 
 
