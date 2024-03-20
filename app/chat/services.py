@@ -42,13 +42,15 @@ class CompletionService:
                         yield chunk
 
         async def stream_response_openai():
-            response: AsyncStream = await client.chat.completions.create(
+            stream: AsyncStream = await client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=cls.get_messages(input_message),
                 stream=True
             )
 
-            async for chunk in response.response.aiter_bytes():
-                yield chunk
+            async for event  in stream:
+                if "content" in event["choices"][0].delta:
+                    current_response = event["choices"][0].delta.content
+                    yield current_response
 
         return stream_response_openai if openai_key else stream_response
