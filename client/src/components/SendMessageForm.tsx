@@ -3,7 +3,6 @@ import { addMessage, updateLatestAssistantMessage } from '../features/chat/chatS
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { RootState } from '../app/store';
 import { Send } from 'lucide-react'
-import { sendMessage } from '../features/chat/chatAPI';
 
 const SendMessageForm = () => {
   const [message, setMessage] = useState('');
@@ -31,21 +30,45 @@ const SendMessageForm = () => {
 
     dispatch(addMessage({ content: message, role: 'user' }));
 
-    const eventSource = await sendMessage(messagesCopy);
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/v1/completion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages: messagesCopy }),
+    });
 
-    eventSource.onmessage = function (event) {
-      const data = JSON.parse(event.data);
-      const content = data.choices?.[0].delta.content;
-      if (content) {
-        dispatch(updateLatestAssistantMessage(content));
-        scrollToBottom();
+    if (!response.ok || response.status !== 200 || response.body === null) {
+      throw new Error('Network response was not ok');
+    }
+
+
+    dispatch(addMessage({ content: "", role: 'assistant' }));
+
+    const reader = response.body.getReader();
+
+    let responding = true
+
+    while (responding) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        responding = false
+        break;
       }
-    };
 
-    eventSource.onerror = function (error) {
-      console.error('EventSource error:', error);
-      eventSource.close();
-    };
+      const chunk = new TextDecoder().decode(value);
+      const dataPieces = chunk.split('data:');
+
+      for (const piece of dataPieces) {
+        const formattedPiece = piece.trim();
+        if (formattedPiece !== '') {
+          const formattedChunk = ' ' + formattedPiece;
+          dispatch(updateLatestAssistantMessage(formattedChunk));
+          scrollToBottom();
+        }
+      }
+    }
 
     inputRef.current?.focus();
     inputRef.current?.style.setProperty('height', '45px');

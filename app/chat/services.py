@@ -48,9 +48,8 @@ class CompletionService:
                 stream=True
             )
 
-            async for event  in stream:
-                if "content" in event["choices"][0].delta:
-                    current_response = event["choices"][0].delta.content
-                    yield current_response
+            async for event in stream:
+                if current_response := event.choices[0].delta.content:
+                    yield "data: " + current_response + "\n\n"
 
         return stream_response_openai if openai_key else stream_response

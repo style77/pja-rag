@@ -8,7 +8,7 @@ from app.chat.services import CompletionService
 router = APIRouter(tags=["Core Endpoints"])
 
 
-@router.route("/v1/completion", methods=["POST", "GET"])
+@router.post("/v1/completion")
 async def completion_create(input_message: Message) -> StreamingResponse:
     stream_response = await CompletionService.with_stream(input_message)
-    return StreamingResponse(stream_response())
+    return StreamingResponse(stream_response(), media_type='text/event-stream')
