@@ -58,13 +58,12 @@ const SendMessageForm = () => {
       }
 
       const chunk = new TextDecoder().decode(value);
-      const dataPieces = chunk.split('data:');
+      const dataPieces = chunk.split('data: ');
 
       for (const piece of dataPieces) {
-        const formattedPiece = piece.trim();
-        if (formattedPiece !== '') {
-          const formattedChunk = ' ' + formattedPiece;
-          dispatch(updateLatestAssistantMessage(formattedChunk));
+        if (piece !== '') {
+          const formattedPiece = piece.replace(/(\r\n|\n|\r)/gm, "")
+          dispatch(updateLatestAssistantMessage(formattedPiece));
           scrollToBottom();
         }
       }
