@@ -1,18 +1,18 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class FailureReason(StrEnum):
+class FailureReason(Enum):
     NO_DOCUMENTS_FOUND: str = (
         "No documents found in context. Please try again with a different query."
     )
 
 
-class RoleEnum(StrEnum):
+class RoleEnum(Enum):
     USER: str = "user"
     ASSISTANT: str = "assistant"
     SYSTEM: str = "system"
 
 
-class ModelEnum(StrEnum):
+class ModelEnum(Enum):
     MISTRAL: str = "mistral"
     MIXTRAL: str = "mixtral"
